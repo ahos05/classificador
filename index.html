@@ -1,144 +1,170 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Classificador</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Classificador (Supabase)</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #fafafa;
-      color: #333;
-    }
-    h1 {
-      text-align: center;
-      font-size: 26px;
-      margin-bottom: 20px;
-    }
-    .card {
-      background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      background: #333;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    button:hover { background: #444; }
-    .item {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-      margin-bottom: 12px;
-    }
-    .verde { border-left: 6px solid #2ecc71; }
-    .vermelho { border-left: 6px solid #e74c3c; }
-    .filtros button {
-      width: auto;
-      margin-right: 8px;
-    }
+    body { font-family: Inter, system-ui, Arial; max-width:720px; margin:32px auto; padding:20px; background:#fafafa; color:#111; }
+    h1{ text-align:center; margin-bottom:18px; }
+    .card{ background:#fff; padding:18px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.06); margin-bottom:16px; }
+    input, textarea, select { width:100%; padding:10px; margin-top:8px; border-radius:8px; border:1px solid #ddd; font-size:15px; box-sizing:border-box; }
+    button { padding:10px 14px; border-radius:10px; border:0; cursor:pointer; font-weight:600; margin-top:10px; background:#111; color:#fff; width:100%; }
+    .filtros { margin-bottom:12px; }
+    .filtros button { width:auto; display:inline-block; margin-right:8px; padding:8px 12px; background:#eee; color:#111; border-radius:8px; border:0; cursor:pointer;}
+    .item{ background:#fff; padding:12px; border-radius:10px; margin-bottom:10px; box-shadow:0 1px 6px rgba(0,0,0,0.04); }
+    .verde{ border-left:6px solid #2ecc71; }
+    .vermelho{ border-left:6px solid #e74c3c; }
+    small { color:#666; display:block; margin-top:6px; }
   </style>
 </head>
 <body>
-  <h1>Classificador de Pessoas</h1>
+  <h1>Classificador</h1>
 
   <div class="card">
-    <label>Nome:</label>
+    <label>Nome</label>
     <input id="nome" placeholder="Digite o nome" />
 
-    <label>Classificação:</label>
+    <label>Cor</label>
     <select id="cor">
       <option value="verde">Verde</option>
       <option value="vermelho">Vermelho</option>
     </select>
 
-    <label>Observação:</label>
-    <textarea id="obs" rows="3" placeholder="Digite a observação..."></textarea>
+    <label>Observação</label>
+    <textarea id="obs" rows="3" placeholder="Observação (opcional)"></textarea>
 
-    <button onclick="salvar()">Salvar</button>
+    <button id="btnSalvar">Salvar</button>
+    <small id="status">Conectando ao Supabase...</small>
   </div>
 
   <div class="filtros">
-    <button onclick="filtrar('todos')">Todos</button>
-    <button onclick="filtrar('verde')">Verde</button>
-    <button onclick="filtrar('vermelho')">Vermelho</button>
+    <button data-filter="todos">Todos</button>
+    <button data-filter="verde">Verdes</button>
+    <button data-filter="vermelho">Vermelhos</button>
   </div>
 
   <h2>Lista</h2>
   <div id="lista"></div>
 
+  <!-- supabase client (UMD build) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+
   <script>
-    let dados = JSON.parse(localStorage.getItem("pessoas") || "{}");
+    // ---------- COLOQUE AQUI SUA URL E ANON KEY ----------
+    const SUPABASE_URL = "https://iqffvvjnzxdvnzkecyyh.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxZmZ2dmpuenhkdm56a2VjeXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0NDQzMTMsImV4cCI6MjA4MDAyMDMxM30.ZSFoR0cMYlmHlAZpiK0VLPb8vZDfs5X3-yuuGk3w1f0";
+    // ----------------------------------------------------
 
-    function salvar() {
-      const nome = document.getElementById("nome").value.trim();
-      const cor = document.getElementById("cor").value;
-      const obs = document.getElementById("obs").value.trim();
+    const statusEl = document.getElementById('status');
 
-      if (!nome) return alert("Digite um nome!");
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL.includes('COLE') ) {
+      statusEl.textContent = 'Erro: cole SUPABASE_URL e SUPABASE_ANON_KEY no arquivo.';
+      statusEl.style.color = 'red';
+    }
 
-      if (!dados[nome]) {
-        dados[nome] = { verde: 0, vermelho: 0, obs: [] };
+    const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const nomeInput = document.getElementById('nome');
+    const corSelect = document.getElementById('cor');
+    const obsInput = document.getElementById('obs');
+    const listaEl = document.getElementById('lista');
+    const btnSalvar = document.getElementById('btnSalvar');
+
+    async function init() {
+      try {
+        // checar conexão mínima
+        const { data, error } = await supabase.from('people').select('id').limit(1);
+        if (error) throw error;
+        statusEl.textContent = 'Conectado ao Supabase ✅';
+        statusEl.style.color = 'green';
+      } catch (err) {
+        statusEl.textContent = 'Erro ao conectar: ' + (err.message || err);
+        statusEl.style.color = 'red';
+      }
+      await render('todos');
+    }
+
+    btnSalvar.addEventListener('click', salvar);
+    document.querySelectorAll('.filtros button').forEach(b => b.addEventListener('click', () => {
+      render(b.dataset.filter);
+    }));
+
+    async function salvar() {
+      const name = nomeInput.value.trim();
+      const color = corSelect.value;
+      const observation = obsInput.value.trim();
+
+      if (!name) return alert('Digite um nome!');
+
+      btnSalvar.disabled = true;
+      btnSalvar.textContent = 'Salvando...';
+
+      const payload = { name, color, observation };
+      const { data, error } = await supabase.from('people').insert([payload]).select();
+
+      btnSalvar.disabled = false;
+      btnSalvar.textContent = 'Salvar';
+
+      if (error) {
+        console.error(error);
+        alert('Erro ao salvar: ' + (error.message || JSON.stringify(error)));
+        return;
       }
 
-      dados[nome][cor]++;
-      if (obs) dados[nome].obs.push(obs);
-
-      localStorage.setItem("pessoas", JSON.stringify(dados));
-
-      document.getElementById("nome").value = "";
-      document.getElementById("obs").value = "";
-
-      render("todos");
+      nomeInput.value = '';
+      obsInput.value = '';
+      render('todos');
     }
 
-    function filtrar(tipo) {
-      render(tipo);
-    }
+    // pega todas entradas, agrupa por nome e conta cores
+    async function render(filter) {
+      listaEl.innerHTML = 'Carregando...';
 
-    function render(filtro) {
-      const lista = document.getElementById("lista");
-      lista.innerHTML = "";
+      const { data, error } = await supabase
+        .from('people')
+        .select('id, name, color, observation, created_at')
+        .order('created_at', { ascending: false });
 
-      Object.keys(dados).forEach(nome => {
-        const item = dados[nome];
-        const corPrincipal = item.verde > item.vermelho ? "verde" : "vermelho";
+      if (error) {
+        listaEl.innerHTML = 'Erro ao carregar: ' + (error.message || JSON.stringify(error));
+        return;
+      }
 
-        if (filtro !== "todos" && filtro !== corPrincipal) return;
-
-        const div = document.createElement("div");
-        div.className = `item ${corPrincipal}`;
-        div.innerHTML = `
-          <strong>${nome}</strong><br>
-          Verde: ${item.verde} | Vermelho: ${item.vermelho}<br>
-          <em>${item.obs.join("<br>")}</em>
-        `;
-        lista.appendChild(div);
+      // agrupa por nome
+      const resumo = {};
+      data.forEach(row => {
+        const n = row.name.trim();
+        if (!resumo[n]) resumo[n] = { verde: 0, vermelho: 0, obs: [] };
+        if (row.color === 'verde') resumo[n].verde++;
+        else resumo[n].vermelho++;
+        if (row.observation) resumo[n].obs.push(row.observation);
       });
+
+      // construir DOM
+      listaEl.innerHTML = '';
+      const nomes = Object.keys(resumo).sort((a,b) => resumo[b].verde + resumo[b].vermelho - (resumo[a].verde + resumo[a].vermelho));
+      nomes.forEach(nome => {
+        const item = resumo[nome];
+        const corPrincipal = item.verde > item.vermelho ? 'verde' : (item.vermelho > item.verde ? 'vermelho' : 'verde');
+        if (filter !== 'todos' && filter !== corPrincipal) return;
+
+        const div = document.createElement('div');
+        div.className = 'item ' + corPrincipal;
+        div.innerHTML = `<strong>${escapeHtml(nome)}</strong>
+                         <div>Verde: ${item.verde} | Vermelho: ${item.vermelho}</div>
+                         <div style="margin-top:8px">${item.obs.map(o=>`<div style="font-size:13px;margin-bottom:4px">• ${escapeHtml(o)}</div>`).join('')}</div>`;
+        listaEl.appendChild(div);
+      });
+
+      if (nomes.length === 0) listaEl.innerHTML = '<em>Sem registros</em>';
     }
 
-    render("todos");
+    // util: escapar HTML simples
+    function escapeHtml(str){ return String(str).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]) }); }
+
+    // inicializa
+    init();
   </script>
 </body>
 </html>
