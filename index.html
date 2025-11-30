@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classificador</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #fafafa;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      font-size: 26px;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #333;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover { background: #444; }
+    .item {
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      margin-bottom: 12px;
+    }
+    .verde { border-left: 6px solid #2ecc71; }
+    .vermelho { border-left: 6px solid #e74c3c; }
+    .filtros button {
+      width: auto;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Classificador de Pessoas</h1>
+
+  <div class="card">
+    <label>Nome:</label>
+    <input id="nome" placeholder="Digite o nome" />
+
+    <label>Classificação:</label>
+    <select id="cor">
+      <option value="verde">Verde</option>
+      <option value="vermelho">Vermelho</option>
+    </select>
+
+    <label>Observação:</label>
+    <textarea id="obs" rows="3" placeholder="Digite a observação..."></textarea>
+
+    <button onclick="salvar()">Salvar</button>
+  </div>
+
+  <div class="filtros">
+    <button onclick="filtrar('todos')">Todos</button>
+    <button onclick="filtrar('verde')">Verde</button>
+    <button onclick="filtrar('vermelho')">Vermelho</button>
+  </div>
+
+  <h2>Lista</h2>
+  <div id="lista"></div>
+
+  <script>
+    let dados = JSON.parse(localStorage.getItem("pessoas") || "{}");
+
+    function salvar() {
+      const nome = document.getElementById("nome").value.trim();
+      const cor = document.getElementById("cor").value;
+      const obs = document.getElementById("obs").value.trim();
+
+      if (!nome) return alert("Digite um nome!");
+
+      if (!dados[nome]) {
+        dados[nome] = { verde: 0, vermelho: 0, obs: [] };
+      }
+
+      dados[nome][cor]++;
+      if (obs) dados[nome].obs.push(obs);
+
+      localStorage.setItem("pessoas", JSON.stringify(dados));
+
+      document.getElementById("nome").value = "";
+      document.getElementById("obs").value = "";
+
+      render("todos");
+    }
+
+    function filtrar(tipo) {
+      render(tipo);
+    }
+
+    function render(filtro) {
+      const lista = document.getElementById("lista");
+      lista.innerHTML = "";
+
+      Object.keys(dados).forEach(nome => {
+        const item = dados[nome];
+        const corPrincipal = item.verde > item.vermelho ? "verde" : "vermelho";
+
+        if (filtro !== "todos" && filtro !== corPrincipal) return;
+
+        const div = document.createElement("div");
+        div.className = `item ${corPrincipal}`;
+        div.innerHTML = `
+          <strong>${nome}</strong><br>
+          Verde: ${item.verde} | Vermelho: ${item.vermelho}<br>
+          <em>${item.obs.join("<br>")}</em>
+        `;
+        lista.appendChild(div);
+      });
+    }
+
+    render("todos");
+  </script>
+</body>
+</html>
