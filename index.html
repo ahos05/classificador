@@ -63,8 +63,7 @@
       statusEl.style.color = 'red';
     }
 
-    const supabase = supabaseJs.createClient("https://iqffvvjnzxdvnzkecyyh.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxZmZ2dmpuenhkdm56a2VjeXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0NDQzMTMsImV4cCI6MjA4MDAyMDMxM30.ZSFoR0cMYlmHlAZpiK0VLPb8vZDfs5X3-yuuGk3w1f0");
-
+    const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const nomeInput = document.getElementById('nome');
     const corSelect = document.getElementById('cor');
     const obsInput = document.getElementById('obs');
